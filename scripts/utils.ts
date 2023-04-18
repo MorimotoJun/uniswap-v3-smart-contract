@@ -7,7 +7,7 @@ import * as path from "path";
 // E : define path
 const ROOT_PATH = path.resolve(__dirname, "..");
 const ARTIFACTS = path.join(ROOT_PATH, "artifacts", "contracts");
-const TEST_ARTIFACTS = path.join(ROOT_PATH, "artifacts", "contracts", "test");
+const UTILS = path.join(ROOT_PATH, "utils");
 
 
 interface ABI {
@@ -32,4 +32,10 @@ export function getAbi(CONTRACT: ContractEnum): ABI {
 
 export enum ContractEnum {
     Swap = 'SimpleSwap',
+}
+
+export function getTokenABI(): any {
+    const p = path.join(UTILS, 'WrappedToken.json');
+    const str = fs.readFileSync(p).toString();
+    return JSON.parse(str);
 }
