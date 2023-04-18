@@ -10,9 +10,11 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "hardhat/console.sol";
 
 enum FeeTier {
     Low, Mid, High
@@ -40,21 +42,18 @@ contract SimpleSwap {
     using SafeMath for uint256;
 
     ISwapRouter public immutable swapRouter;
-    IQuoter public immutable quoter;
+    IQuoterV2 public immutable quoter;
     IUniswapV3Factory public immutable factory;
     IWmatic public immutable wmatic;
 
-    address public constant TBS = 0x5A7BB7B8EFF493625A2bB855445911e63A490E42;
-    address private constant POOL   = 0xB68606a75b117906e06cAa0755896AD2b3Dd0272;
-
     address public constant WMATIC = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     address private constant ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address private constant QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+    address private constant QUOTER = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e;
     address private constant FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
     
     constructor() {
         swapRouter = ISwapRouter(ROUTER);
-        quoter = IQuoter(QUOTER);
+        quoter = IQuoterV2(QUOTER);
         factory = IUniswapV3Factory(FACTORY);
         wmatic = IWmatic(WMATIC);
     }
@@ -77,6 +76,10 @@ contract SimpleSwap {
         uint256 priceB = 1 << 96;
 
         uint256 price = priceA.mul(FixedPoint96.Q96).div(priceB);
+        console.log(price);
+        console.log(zeroToOne);
+        console.log(amountIn);
+        console.log(pool.liquidity());
         sqrtPriceLimitX96 = SqrtPriceMath.getNextSqrtPriceFromInput(
             uint160(price),
             pool.liquidity(),
@@ -112,13 +115,13 @@ contract SimpleSwap {
 
         uint160 priceLimit = _calculateSqrtPriceLimitX96(zeroToOne, amountIn, pool);
 
-        uint256 quotedAmountOut = quoter.quoteExactInputSingle(
+        (uint256 quotedAmountOut,,,) = quoter.quoteExactInputSingle(IQuoterV2.QuoteExactInputSingleParams(
             WMATIC,
             token,
-            fee,
             amountIn,
+            fee,
             priceLimit
-        );
+        ));
 
         // Create the params that will be used to execute the swap
         ISwapRouter.ExactInputSingleParams memory params =
@@ -158,14 +161,28 @@ contract SimpleSwap {
         // IUniswapV3Pool pool = IUniswapV3Pool(0xB68606a75b117906e06cAa0755896AD2b3Dd0272);
         IUniswapV3Pool pool = IUniswapV3Pool(_getPool(_swapRequest.token0, _swapRequest.token1, fee));
 
+        console.log(
+            address(pool)
+        );
+
         uint160 priceLimit = _calculateSqrtPriceLimitX96(zeroToOne, amountIn, pool);
 
-        uint256 quotedAmountOut = quoter.quoteExactInputSingle(
+        console.log(address(token));
+        console.log(WMATIC);
+        console.log(fee);
+        console.log(amountIn);
+        console.log(priceLimit);
+
+        (uint256 quotedAmountOut,,,) = quoter.quoteExactInputSingle(IQuoterV2.QuoteExactInputSingleParams(
             token,
             WMATIC,
-            fee,
             amountIn,
+            fee,
             priceLimit
+        ));
+
+        console.log(
+            quotedAmountOut
         );
 
         // Create the params that will be used to execute the swap

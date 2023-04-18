@@ -22,7 +22,8 @@ interface SwapRequest {
 }
 
 const WMATIC = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270';
-const TOKEN = '0x5A7BB7B8EFF493625A2bB855445911e63A490E42';
+const TOKEN = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+// const TOKEN = '0x5A7BB7B8EFF493625A2bB855445911e63A490E42';
 
 let balance = '0';
 
@@ -32,7 +33,7 @@ describe("SimpleSwap", function () {
             const { swap } = await loadFixture(deploySwap);
 
             expect(await swap.swapRouter()).to.equal('0xE592427A0AEce92De3Edee1F18E0157C05861564');
-            expect(await swap.quoter()).to.equal('0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6');
+            expect(await swap.quoter()).to.equal('0x61fFE014bA17989E743c5F6cB21bF9697530B21e');
             expect(await swap.wmatic()).to.equal('0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270');
         });
     });
