@@ -32,6 +32,7 @@ export function getAbi(CONTRACT: ContractEnum): ABI {
 
 export enum ContractEnum {
     Swap = 'SimpleSwap',
+    Quoter = 'QuoterV2',
 }
 
 export function getTokenABI(): any {

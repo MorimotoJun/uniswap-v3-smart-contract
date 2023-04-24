@@ -14,6 +14,8 @@ import '@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+
 import "hardhat/console.sol";
 
 enum FeeTier {
@@ -29,7 +31,9 @@ struct SwapRequest {
 
 interface IWmatic is IERC20 {
     function deposit() payable external;
-    function withdraw(uint wad) payable external;
+    function approve(address guy, uint256 wad) external override returns (bool);
+    function withdraw(uint wad) external;
+    function balanceOf(address) external view override returns(uint256);
 }
 
 
@@ -58,6 +62,14 @@ contract SimpleSwap {
         wmatic = IWmatic(WMATIC);
     }
 
+    // J : 基軸通貨を受け取った時に動作するメソッド
+    // E : Methods triggered by receiving key currency
+    receive() external payable {
+    }
+
+    fallback() external payable {
+    }
+
     function _getFee(FeeTier feeTier) private pure returns (uint24 fee) {
         if (feeTier == FeeTier.Low) { fee = 3000; }
         else if (feeTier == FeeTier.Mid) { fee = 5000; }
@@ -71,21 +83,23 @@ contract SimpleSwap {
     function _calculateSqrtPriceLimitX96(bool zeroToOne, uint256 amountIn, IUniswapV3Pool pool) private view returns (uint160 sqrtPriceLimitX96) {
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
         // numerator = sqrtPriceX96 * sqrtPriceX96 / 2^96
-        uint256 priceA = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 96;
+        // uint256 priceA = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 96;
         // denominator = 2^96
-        uint256 priceB = 1 << 96;
+        // uint256 priceB = 1 << 96;
 
-        uint256 price = priceA.mul(FixedPoint96.Q96).div(priceB);
-        console.log(price);
-        console.log(zeroToOne);
-        console.log(amountIn);
-        console.log(pool.liquidity());
+        // uint256 price = priceA.mul(FixedPoint96.Q96).div(priceB);
+
+        console.log("current sqrt price", sqrtPriceX96);
+
         sqrtPriceLimitX96 = SqrtPriceMath.getNextSqrtPriceFromInput(
-            uint160(price),
+            sqrtPriceX96,
+            // uint160(price),
             pool.liquidity(),
             amountIn,
             zeroToOne
         );
+
+        console.log("next sqrt price", sqrtPriceLimitX96);
     }
     
     function swapMaticToToken(SwapRequest memory _swapRequest) external payable returns (uint256 amountOut) {
@@ -167,11 +181,16 @@ contract SimpleSwap {
 
         uint160 priceLimit = _calculateSqrtPriceLimitX96(zeroToOne, amountIn, pool);
 
+        console.log("token0 is WMATIC", pool.token0() == WMATIC);
+        console.log("token1 is DAI", pool.token1() == token);
+
         console.log(address(token));
         console.log(WMATIC);
         console.log(fee);
         console.log(amountIn);
-        console.log(priceLimit);
+        console.log("priceLimit", priceLimit);
+        console.log("zeroToOne", zeroToOne);
+        console.log("quoting...");
 
         (uint256 quotedAmountOut,,,) = quoter.quoteExactInputSingle(IQuoterV2.QuoteExactInputSingleParams(
             token,
@@ -182,8 +201,18 @@ contract SimpleSwap {
         ));
 
         console.log(
+            "quoted",
             quotedAmountOut
         );
+
+        console.log(
+            "check token",
+            token > WMATIC
+        );
+
+        // Set your slippage tolerance, e.g., 1%.
+        uint256 slippageTolerance = 100; // 1%
+        uint256 amountOutMinimum = (quotedAmountOut * (10000 - slippageTolerance)) / 10000;
 
         // Create the params that will be used to execute the swap
         ISwapRouter.ExactInputSingleParams memory params =
@@ -191,16 +220,27 @@ contract SimpleSwap {
                 tokenIn: token,
                 tokenOut: WMATIC,
                 fee: fee,
-                recipient: msg.sender,
+                recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: amountIn,
-                amountOutMinimum: quotedAmountOut,
+                amountOutMinimum: amountOutMinimum,
                 sqrtPriceLimitX96: priceLimit
             });
         // The call to `exactInputSingle` executes the swap.
         amountOut = swapRouter.exactInputSingle(params);
 
-        wmatic.withdraw(amountOut);
-        msg.sender.transfer(amountOut);
+        console.log("amountOut", amountOut);
+
+        console.log("WMATIC balance", wmatic.balanceOf(address(this)));
+
+        uint256 amount = wmatic.balanceOf(address(this));
+
+        // wmatic.approve(WMATIC, amountOut);
+        // console.log("approved");
+        wmatic.withdraw(amount);
+        address payable user = msg.sender;
+
+        console.log("withdrawed", address(this).balance);
+        user.transfer(amountOut);
     }
 }

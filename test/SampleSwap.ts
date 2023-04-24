@@ -2,7 +2,6 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { ContractEnum, getTokenABI } from "../scripts/utils";
-import { string } from "hardhat/internal/core/params/argumentTypes";
 
 enum FeeTier {
     LOW  = 0,
@@ -22,8 +21,8 @@ interface SwapRequest {
 }
 
 const WMATIC = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270';
-const TOKEN = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
-// const TOKEN = '0x5A7BB7B8EFF493625A2bB855445911e63A490E42';
+const TOKEN = '0x5A7BB7B8EFF493625A2bB855445911e63A490E42';
+// const TOKEN = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
 
 let balance = '0';
 
@@ -128,10 +127,10 @@ describe("SimpleSwap", function () {
             balance = (await user.getBalance()).toString();
             const amountIn = await token.balanceOf(user.address);
 
-            console.log(amountIn)
+            console.log(amountIn.toString())
 
             await token.approve(swap.address, amountIn);
-
+            
             req = {
                 token0: WMATIC,
                 token1: TOKEN,
@@ -144,6 +143,7 @@ describe("SimpleSwap", function () {
             });
 
             expect(BigInt((await user.getBalance()).toString()) - BigInt(balance)).to.lessThan(BigInt('10000000000000000000'));
+            expect(BigInt((await user.getBalance()).toString()) - BigInt(balance)).to.greaterThan(BigInt('9000000000000000000'));
             expect(await token.balanceOf(user.address)).to.equal('0');
             expect(await wmatic.balanceOf(user.address)).to.equal('0');
 
