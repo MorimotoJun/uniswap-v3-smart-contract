@@ -82,14 +82,6 @@ contract SimpleSwap {
 
     function _calculateSqrtPriceLimitX96(bool zeroToOne, uint256 amountIn, IUniswapV3Pool pool) private view returns (uint160 sqrtPriceLimitX96) {
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
-        // numerator = sqrtPriceX96 * sqrtPriceX96 / 2^96
-        // uint256 priceA = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 96;
-        // denominator = 2^96
-        // uint256 priceB = 1 << 96;
-
-        // uint256 price = priceA.mul(FixedPoint96.Q96).div(priceB);
-
-        console.log("current sqrt price", sqrtPriceX96);
 
         sqrtPriceLimitX96 = SqrtPriceMath.getNextSqrtPriceFromInput(
             sqrtPriceX96,
@@ -98,8 +90,6 @@ contract SimpleSwap {
             amountIn,
             zeroToOne
         );
-
-        console.log("next sqrt price", sqrtPriceLimitX96);
     }
     
     function swapMaticToToken(SwapRequest memory _swapRequest) external payable returns (uint256 amountOut) {
@@ -175,22 +165,7 @@ contract SimpleSwap {
         // IUniswapV3Pool pool = IUniswapV3Pool(0xB68606a75b117906e06cAa0755896AD2b3Dd0272);
         IUniswapV3Pool pool = IUniswapV3Pool(_getPool(_swapRequest.token0, _swapRequest.token1, fee));
 
-        console.log(
-            address(pool)
-        );
-
         uint160 priceLimit = _calculateSqrtPriceLimitX96(zeroToOne, amountIn, pool);
-
-        console.log("token0 is WMATIC", pool.token0() == WMATIC);
-        console.log("token1 is DAI", pool.token1() == token);
-
-        console.log(address(token));
-        console.log(WMATIC);
-        console.log(fee);
-        console.log(amountIn);
-        console.log("priceLimit", priceLimit);
-        console.log("zeroToOne", zeroToOne);
-        console.log("quoting...");
 
         (uint256 quotedAmountOut,,,) = quoter.quoteExactInputSingle(IQuoterV2.QuoteExactInputSingleParams(
             token,
@@ -199,16 +174,6 @@ contract SimpleSwap {
             fee,
             priceLimit
         ));
-
-        console.log(
-            "quoted",
-            quotedAmountOut
-        );
-
-        console.log(
-            "check token",
-            token > WMATIC
-        );
 
         // Set your slippage tolerance, e.g., 1%.
         uint256 slippageTolerance = 100; // 1%
@@ -229,18 +194,9 @@ contract SimpleSwap {
         // The call to `exactInputSingle` executes the swap.
         amountOut = swapRouter.exactInputSingle(params);
 
-        console.log("amountOut", amountOut);
+        wmatic.withdraw(amountOut);
 
-        console.log("WMATIC balance", wmatic.balanceOf(address(this)));
-
-        uint256 amount = wmatic.balanceOf(address(this));
-
-        // wmatic.approve(WMATIC, amountOut);
-        // console.log("approved");
-        wmatic.withdraw(amount);
         address payable user = msg.sender;
-
-        console.log("withdrawed", address(this).balance);
         user.transfer(amountOut);
     }
 }
