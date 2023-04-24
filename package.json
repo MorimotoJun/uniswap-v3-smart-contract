@@ -24,6 +24,7 @@
     "hardhat": "^2.14.0"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^2.0.2"
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "ganache-cli": "^6.12.2"
   }
 }
